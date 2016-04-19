@@ -66,17 +66,15 @@ public class JournalEntry extends AbstractAuditableCustom<AppUser, Long> {
     @Column(name = "transaction_id", nullable = false, length = 50)
     private String transactionId;
 
-    @ManyToOne
-    @JoinColumn(name = "loan_transaction_id", nullable = false)
-    private LoanTransaction loanTransaction;
+    
+    @Column(name = "loan_transaction_id", nullable = false)
+    private Long loanTransaction;
 
-    @ManyToOne
-    @JoinColumn(name = "savings_transaction_id", nullable = false)
-    private SavingsAccountTransaction savingsTransaction;
+    @Column(name = "savings_transaction_id", nullable = false)
+    private Long savingsTransaction;
 
-    @ManyToOne
-    @JoinColumn(name = "client_transaction_id", nullable = false)
-    private ClientTransaction clientTransaction;
+    @Column(name = "client_transaction_id", nullable = false)
+    private Long clientTransaction;
 
     @Column(name = "share_transaction_id", nullable = true)
     private Long shareTransactionId;
@@ -112,8 +110,8 @@ public class JournalEntry extends AbstractAuditableCustom<AppUser, Long> {
     public static JournalEntry createNew(final Office office, final PaymentDetail paymentDetail, final GLAccount glAccount,
             final String currencyCode, final String transactionId, final boolean manualEntry, final Date transactionDate,
             final JournalEntryType journalEntryType, final BigDecimal amount, final String description, final Integer entityType,
-            final Long entityId, final String referenceNumber, final LoanTransaction loanTransaction,
-            final SavingsAccountTransaction savingsTransaction, final ClientTransaction clientTransaction, Long shareTransactionId) {
+            final Long entityId, final String referenceNumber, final Long loanTransaction,
+            final Long savingsTransaction, final Long clientTransaction, Long shareTransactionId) {
         return new JournalEntry(office, paymentDetail, glAccount, currencyCode, transactionId, manualEntry, transactionDate,
                 journalEntryType.getValue(), amount, description, entityType, entityId, referenceNumber, loanTransaction,
                 savingsTransaction, clientTransaction, shareTransactionId);
@@ -126,8 +124,8 @@ public class JournalEntry extends AbstractAuditableCustom<AppUser, Long> {
     public JournalEntry(final Office office, final PaymentDetail paymentDetail, final GLAccount glAccount, final String currencyCode,
             final String transactionId, final boolean manualEntry, final Date transactionDate, final Integer type, final BigDecimal amount,
             final String description, final Integer entityType, final Long entityId, final String referenceNumber,
-            final LoanTransaction loanTransaction, final SavingsAccountTransaction savingsTransaction,
-            final ClientTransaction clientTransaction, final Long shareTransactionId) {
+            final Long loanTransaction, final Long savingsTransaction,
+            final Long clientTransaction, final Long shareTransactionId) {
         this.office = office;
         this.glAccount = glAccount;
         this.reversalJournalEntry = null;
@@ -189,11 +187,11 @@ public class JournalEntry extends AbstractAuditableCustom<AppUser, Long> {
         return this.currencyCode;
     }
 
-    public LoanTransaction getLoanTransaction() {
+    public long getLoanTransaction() {
         return this.loanTransaction;
     }
 
-    public SavingsAccountTransaction getSavingsTransaction() {
+    public long getSavingsTransaction() {
         return this.savingsTransaction;
     }
 
@@ -205,7 +203,7 @@ public class JournalEntry extends AbstractAuditableCustom<AppUser, Long> {
         return transactionId;
     }
 
-    public ClientTransaction getClientTransaction() {
+    public long getClientTransaction() {
         return this.clientTransaction;
     }
 

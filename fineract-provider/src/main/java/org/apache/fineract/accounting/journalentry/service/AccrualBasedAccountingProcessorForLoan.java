@@ -30,14 +30,18 @@ import org.apache.fineract.accounting.common.AccountingConstants.FINANCIAL_ACTIV
 import org.apache.fineract.accounting.journalentry.data.ChargePaymentDTO;
 import org.apache.fineract.accounting.journalentry.data.LoanDTO;
 import org.apache.fineract.accounting.journalentry.data.LoanTransactionDTO;
+import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
 import org.apache.fineract.organisation.office.domain.Office;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
 @Component
-public class AccrualBasedAccountingProcessorForLoan implements AccountingProcessorForLoan {
-
+public class AccrualBasedAccountingProcessorForLoan implements AccountingProcessorForLoan {	
     private final AccountingProcessorHelper helper;
+    private final static Logger logger = LoggerFactory.getLogger(AccrualBasedAccountingProcessorForLoan.class);
 
     @Autowired
     public AccrualBasedAccountingProcessorForLoan(final AccountingProcessorHelper accountingProcessorHelper) {
@@ -46,53 +50,60 @@ public class AccrualBasedAccountingProcessorForLoan implements AccountingProcess
 
     @Override
     public void createJournalEntriesForLoan(final LoanDTO loanDTO) {
-        final GLClosure latestGLClosure = this.helper.getLatestClosureByBranch(loanDTO.getOfficeId());
-        final Office office = this.helper.getOfficeById(loanDTO.getOfficeId());
-        for (final LoanTransactionDTO loanTransactionDTO : loanDTO.getNewLoanTransactions()) {
-            final Date transactionDate = loanTransactionDTO.getTransactionDate();
-            this.helper.checkForBranchClosures(latestGLClosure, transactionDate);
-
-            /** Handle Disbursements **/
-            if (loanTransactionDTO.getTransactionType().isDisbursement()) {
-                createJournalEntriesForDisbursements(loanDTO, loanTransactionDTO, office);
-            }
-
-            /*** Handle Accruals ***/
-            if (loanTransactionDTO.getTransactionType().isAccrual()) {
-                createJournalEntriesForAccruals(loanDTO, loanTransactionDTO, office);
-            }
-
-            /***
-             * Handle repayments, repayments at disbursement and reversal of
-             * Repayments and Repayments at disbursement
-             ***/
-            else if (loanTransactionDTO.getTransactionType().isRepayment()
-                    || loanTransactionDTO.getTransactionType().isRepaymentAtDisbursement()
-                    || loanTransactionDTO.getTransactionType().isChargePayment()) {
-                createJournalEntriesForRepaymentsAndWriteOffs(loanDTO, loanTransactionDTO, office, false, loanTransactionDTO
-                        .getTransactionType().isRepaymentAtDisbursement());
-            }
-
-            /** Logic for handling recovery payments **/
-            else if (loanTransactionDTO.getTransactionType().isRecoveryRepayment()) {
-                createJournalEntriesForRecoveryRepayments(loanDTO, loanTransactionDTO, office);
-            }
-
-            /** Logic for Refunds of Overpayments **/
-            else if (loanTransactionDTO.getTransactionType().isRefund()) {
-                createJournalEntriesForRefund(loanDTO, loanTransactionDTO, office);
-            }
-
-            /** Handle Write Offs, waivers and their reversals **/
-            else if ((loanTransactionDTO.getTransactionType().isWriteOff() || loanTransactionDTO.getTransactionType().isWaiveInterest() || loanTransactionDTO
-                    .getTransactionType().isWaiveCharges())) {
-                createJournalEntriesForRepaymentsAndWriteOffs(loanDTO, loanTransactionDTO, office, true, false);
-            }
-            
-            /** Logic for Refunds of Active Loans **/
-            else if (loanTransactionDTO.getTransactionType().isRefundForActiveLoans()) {
-                createJournalEntriesForRefundForActiveLoan(loanDTO, loanTransactionDTO, office);
-            }
+    	try{
+	        final GLClosure latestGLClosure = this.helper.getLatestClosureByBranch(loanDTO.getOfficeId());
+	        final Office office = this.helper.getOfficeById(loanDTO.getOfficeId());
+	        for (final LoanTransactionDTO loanTransactionDTO : loanDTO.getNewLoanTransactions()) {
+	            final Date transactionDate = loanTransactionDTO.getTransactionDate();
+	            this.helper.checkForBranchClosures(latestGLClosure, transactionDate);
+	
+	            /** Handle Disbursements **/
+	            if (loanTransactionDTO.getTransactionType().isDisbursement()) {
+	                createJournalEntriesForDisbursements(loanDTO, loanTransactionDTO, office);
+	            }
+	
+	            /*** Handle Accruals ***/
+	            if (loanTransactionDTO.getTransactionType().isAccrual()) {
+	                createJournalEntriesForAccruals(loanDTO, loanTransactionDTO, office);
+	            }
+	
+	            /***
+	             * Handle repayments, repayments at disbursement and reversal of
+	             * Repayments and Repayments at disbursement
+	             ***/
+	            else if (loanTransactionDTO.getTransactionType().isRepayment()
+	                    || loanTransactionDTO.getTransactionType().isRepaymentAtDisbursement()
+	                    || loanTransactionDTO.getTransactionType().isChargePayment()) {
+	                createJournalEntriesForRepaymentsAndWriteOffs(loanDTO, loanTransactionDTO, office, false, loanTransactionDTO
+	                        .getTransactionType().isRepaymentAtDisbursement());
+	            }
+	
+	            /** Logic for handling recovery payments **/
+	            else if (loanTransactionDTO.getTransactionType().isRecoveryRepayment()) {
+	                createJournalEntriesForRecoveryRepayments(loanDTO, loanTransactionDTO, office);
+	            }
+	
+	            /** Logic for Refunds of Overpayments **/
+	            else if (loanTransactionDTO.getTransactionType().isRefund()) {
+	                createJournalEntriesForRefund(loanDTO, loanTransactionDTO, office);
+	            }
+	
+	            /** Handle Write Offs, waivers and their reversals **/
+	            else if ((loanTransactionDTO.getTransactionType().isWriteOff() || loanTransactionDTO.getTransactionType().isWaiveInterest() || loanTransactionDTO
+	                    .getTransactionType().isWaiveCharges())) {
+	                createJournalEntriesForRepaymentsAndWriteOffs(loanDTO, loanTransactionDTO, office, true, false);
+	            }
+	            
+	            /** Logic for Refunds of Active Loans **/
+	            else if (loanTransactionDTO.getTransactionType().isRefundForActiveLoans()) {
+	                createJournalEntriesForRefundForActiveLoan(loanDTO, loanTransactionDTO, office);
+	            }
+	        }
+    	} catch (final DataIntegrityViolationException dve) {
+     	  final Throwable realCause = dve.getMostSpecificCause();
+     	  logger.error(dve.getMessage(), dve);
+          throw new PlatformDataIntegrityException("error.msg.glJournalEntry.unknown.data.integrity.issue",
+                  "Unknown data integrity issue with resource Journal Entry: " + realCause.getMessage());
         }
     }
 
@@ -105,7 +116,6 @@ public class AccrualBasedAccountingProcessorForLoan implements AccountingProcess
      */
     private void createJournalEntriesForDisbursements(final LoanDTO loanDTO, final LoanTransactionDTO loanTransactionDTO,
             final Office office) {
-
         // loan properties
         final Long loanProductId = loanDTO.getLoanProductId();
         final Long loanId = loanDTO.getLoanId();
@@ -307,8 +317,8 @@ public class AccrualBasedAccountingProcessorForLoan implements AccountingProcess
      * @param office
      */
     private void createJournalEntriesForAccruals(final LoanDTO loanDTO, final LoanTransactionDTO loanTransactionDTO, final Office office) {
-
-        // loan properties
+    	
+    	// loan properties
         final Long loanProductId = loanDTO.getLoanProductId();
         final Long loanId = loanDTO.getLoanId();
         final String currencyCode = loanDTO.getCurrencyCode();
@@ -341,7 +351,7 @@ public class AccrualBasedAccountingProcessorForLoan implements AccountingProcess
                     ACCRUAL_ACCOUNTS_FOR_LOAN.PENALTIES_RECEIVABLE.getValue(), ACCRUAL_ACCOUNTS_FOR_LOAN.INCOME_FROM_PENALTIES.getValue(),
                     loanProductId, loanId, transactionId, transactionDate, penaltiesAmount, isReversed,
                     loanTransactionDTO.getPenaltyPayments());
-        }
+        }             
     }
 
     private void createJournalEntriesForRefund(final LoanDTO loanDTO, final LoanTransactionDTO loanTransactionDTO, final Office office) {

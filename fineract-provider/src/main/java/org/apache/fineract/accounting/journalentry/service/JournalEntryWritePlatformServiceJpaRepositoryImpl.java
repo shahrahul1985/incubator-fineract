@@ -310,13 +310,18 @@ public class JournalEntryWritePlatformServiceJpaRepositoryImpl implements Journa
     @Override
     public CommandProcessingResult revertJournalEntry(final JsonCommand command) {
         // is the transaction Id valid
-        final List<JournalEntry> journalEntries = this.glJournalEntryRepository.findUnReversedManualJournalEntriesByTransactionId(command
-                .getTransactionId());
-        String reversalComment = command.stringValueOfParameterNamed("comments");
-
-        if (journalEntries.size() <= 1) { throw new JournalEntriesNotFoundException(command.getTransactionId()); }
-        final String reversalTransactionId = revertJournalEntry(journalEntries, reversalComment);
-        return new CommandProcessingResultBuilder().withTransactionId(reversalTransactionId).build();
+    	try{
+	        final List<JournalEntry> journalEntries = this.glJournalEntryRepository.findUnReversedManualJournalEntriesByTransactionId(command
+	                .getTransactionId());
+	        String reversalComment = command.stringValueOfParameterNamed("comments");
+	
+	        if (journalEntries.size() <= 1) { throw new JournalEntriesNotFoundException(command.getTransactionId()); }
+	        final String reversalTransactionId = revertJournalEntry(journalEntries, reversalComment);
+	        return new CommandProcessingResultBuilder().withTransactionId(reversalTransactionId).build();
+    	}catch (final DataIntegrityViolationException dve) {
+            handleJournalEntryDataIntegrityIssues(dve);
+            return null;
+    	}    	
     }
 
     public String revertJournalEntry(final List<JournalEntry> journalEntries, String reversalComment) {
@@ -361,33 +366,39 @@ public class JournalEntryWritePlatformServiceJpaRepositoryImpl implements Journa
     public String revertProvisioningJournalEntries(final Date reversalTransactionDate, final Long entityId, final Integer entityType) {
         List<JournalEntry> journalEntries = this.glJournalEntryRepository.findProvisioningJournalEntriesByEntityId(entityId, entityType);
         final String reversalTransactionId = journalEntries.get(0).getTransactionId();
-        for (final JournalEntry journalEntry : journalEntries) {
-            JournalEntry reversalJournalEntry;
-            String reversalComment = "Reversal entry for Journal Entry with Entry Id  :" + journalEntry.getId() + " and transaction Id "
-                    + journalEntry.getTransactionId();
-            if (journalEntry.isDebitEntry()) {
-                reversalJournalEntry = JournalEntry.createNew(journalEntry.getOffice(), journalEntry.getPaymentDetails(),
-                        journalEntry.getGlAccount(), journalEntry.getCurrencyCode(), journalEntry.getTransactionId(), Boolean.FALSE,
-                        reversalTransactionDate, JournalEntryType.CREDIT, journalEntry.getAmount(), reversalComment,
-                        journalEntry.getEntityType(), journalEntry.getEntityId(), journalEntry.getReferenceNumber(),
-                        journalEntry.getLoanTransaction(), journalEntry.getSavingsTransaction(), journalEntry.getClientTransaction(),
-                        journalEntry.getShareTransactionId());
-            } else {
-                reversalJournalEntry = JournalEntry.createNew(journalEntry.getOffice(), journalEntry.getPaymentDetails(),
-                        journalEntry.getGlAccount(), journalEntry.getCurrencyCode(), journalEntry.getTransactionId(), Boolean.FALSE,
-                        reversalTransactionDate, JournalEntryType.DEBIT, journalEntry.getAmount(), reversalComment,
-                        journalEntry.getEntityType(), journalEntry.getEntityId(), journalEntry.getReferenceNumber(),
-                        journalEntry.getLoanTransaction(), journalEntry.getSavingsTransaction(), journalEntry.getClientTransaction(),
-                        journalEntry.getShareTransactionId());
+        try{
+        	for (final JournalEntry journalEntry : journalEntries) {
+                JournalEntry reversalJournalEntry;
+                String reversalComment = "Reversal entry for Journal Entry with Entry Id  :" + journalEntry.getId() + " and transaction Id "
+                        + journalEntry.getTransactionId();
+                if (journalEntry.isDebitEntry()) {
+                    reversalJournalEntry = JournalEntry.createNew(journalEntry.getOffice(), journalEntry.getPaymentDetails(),
+                            journalEntry.getGlAccount(), journalEntry.getCurrencyCode(), journalEntry.getTransactionId(), Boolean.FALSE,
+                            reversalTransactionDate, JournalEntryType.CREDIT, journalEntry.getAmount(), reversalComment,
+                            journalEntry.getEntityType(), journalEntry.getEntityId(), journalEntry.getReferenceNumber(),
+                            journalEntry.getLoanTransaction(), journalEntry.getSavingsTransaction(), journalEntry.getClientTransaction(),
+                            journalEntry.getShareTransactionId());
+                } else {
+                    reversalJournalEntry = JournalEntry.createNew(journalEntry.getOffice(), journalEntry.getPaymentDetails(),
+                            journalEntry.getGlAccount(), journalEntry.getCurrencyCode(), journalEntry.getTransactionId(), Boolean.FALSE,
+                            reversalTransactionDate, JournalEntryType.DEBIT, journalEntry.getAmount(), reversalComment,
+                            journalEntry.getEntityType(), journalEntry.getEntityId(), journalEntry.getReferenceNumber(),
+                            journalEntry.getLoanTransaction(), journalEntry.getSavingsTransaction(), journalEntry.getClientTransaction(),
+                            journalEntry.getShareTransactionId());
+                }
+                // save the reversal entry
+                this.glJournalEntryRepository.save(reversalJournalEntry);
+                journalEntry.setReversalJournalEntry(reversalJournalEntry);
+                // save the updated journal entry
+                this.glJournalEntryRepository.save(journalEntry);
             }
-            // save the reversal entry
-            this.glJournalEntryRepository.save(reversalJournalEntry);
-            journalEntry.setReversalJournalEntry(reversalJournalEntry);
-            // save the updated journal entry
-            this.glJournalEntryRepository.save(journalEntry);
-        }
-        return reversalTransactionId;
-
+            return reversalTransactionId;
+        } catch (final DataIntegrityViolationException dve) {
+    	  final Throwable realCause = dve.getMostSpecificCause();
+    	  logger.error(dve.getMessage(), dve);
+    	  throw new PlatformDataIntegrityException("error.msg.glJournalEntry.unknown.data.integrity.issue",
+    		  "Unknown data integrity issue with resource Journal Entry: " + realCause.getMessage());
+    	}
     }
 
     @Override
@@ -434,8 +445,15 @@ public class JournalEntryWritePlatformServiceJpaRepositoryImpl implements Journa
                     expenseMap.put(entry.getExpenseAccount(), amount);
                 }
             }
-            createJournalEnry(provisioningEntry.getCreatedDate(), provisioningEntry.getId(), key.office, key.currency, liabilityMap,
-                    expenseMap);
+            try{
+            	createJournalEnry(provisioningEntry.getCreatedDate(), provisioningEntry.getId(), key.office, key.currency, liabilityMap,
+                        expenseMap);
+            } catch (final DataIntegrityViolationException dve) {
+        	  final Throwable realCause = dve.getMostSpecificCause();
+        	  logger.error(dve.getMessage(), dve);
+        	  throw new PlatformDataIntegrityException("error.msg.glJournalEntry.unknown.data.integrity.issue",
+        		  "Unknown data integrity issue with resource Journal Entry: " + realCause.getMessage());
+        	}
         }
         return "P" + provisioningEntry.getId();
     }
@@ -561,8 +579,8 @@ public class JournalEntryWritePlatformServiceJpaRepositoryImpl implements Journa
             /** Validate current code is appropriate **/
             this.organisationCurrencyRepository.findOneWithNotFoundDetection(currencyCode);
 
-            final ClientTransaction clientTransaction = null;
-            final Long shareTransactionId = null;
+            final Long clientTransaction = null;
+			final Long shareTransactionId = null;
             final JournalEntry glJournalEntry = JournalEntry.createNew(office, paymentDetail, glAccount, currencyCode, transactionId,
                     manualEntry, transactionDate, type, singleDebitOrCreditEntryCommand.getAmount(), comments, null, null, referenceNumber,
                     null, null, clientTransaction, shareTransactionId);
@@ -671,8 +689,8 @@ public class JournalEntryWritePlatformServiceJpaRepositoryImpl implements Journa
                 comments = singleDebitOrCreditEntryCommand.getComments();
             }
 
-            final ClientTransaction clientTransaction = null;
-            final Long shareTransactionId = null;
+            final Long clientTransaction = null;
+			final Long shareTransactionId = null;
             final JournalEntry glJournalEntry = JournalEntry.createNew(office, null, glAccount, currencyCode, transactionId, manualEntry,
                     transactionDate, type, singleDebitOrCreditEntryCommand.getAmount(), comments, null, null, null, null, null,
                     clientTransaction, shareTransactionId);

@@ -23,14 +23,19 @@ import java.util.Date;
 
 import org.apache.fineract.accounting.closure.domain.GLClosure;
 import org.apache.fineract.accounting.journalentry.data.ClientTransactionDTO;
+import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
 import org.apache.fineract.organisation.office.domain.Office;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
 @Component
 public class CashBasedAccountingProcessorForClientTransactions implements AccountingProcessorForClientTransactions {
 
     AccountingProcessorHelper helper;
+    private final static Logger logger = LoggerFactory.getLogger(CashBasedAccountingProcessorForClientTransactions.class);
 
     @Autowired
     public CashBasedAccountingProcessorForClientTransactions(final AccountingProcessorHelper accountingProcessorHelper) {
@@ -39,17 +44,24 @@ public class CashBasedAccountingProcessorForClientTransactions implements Accoun
 
     @Override
     public void createJournalEntriesForClientTransaction(ClientTransactionDTO clientTransactionDTO) {
-        if (clientTransactionDTO.getAccountingEnabled()) {
-            final GLClosure latestGLClosure = this.helper.getLatestClosureByBranch(clientTransactionDTO.getOfficeId());
-            final Date transactionDate = clientTransactionDTO.getTransactionDate();
-            final Office office = this.helper.getOfficeById(clientTransactionDTO.getOfficeId());
-            this.helper.checkForBranchClosures(latestGLClosure, transactionDate);
-
-            /** Handle client payments **/
-            if (clientTransactionDTO.isChargePayment()) {
-                createJournalEntriesForChargePayments(clientTransactionDTO, office);
-            }
-        }
+    	try{
+	        if (clientTransactionDTO.getAccountingEnabled()) {
+	            final GLClosure latestGLClosure = this.helper.getLatestClosureByBranch(clientTransactionDTO.getOfficeId());
+	            final Date transactionDate = clientTransactionDTO.getTransactionDate();
+	            final Office office = this.helper.getOfficeById(clientTransactionDTO.getOfficeId());
+	            this.helper.checkForBranchClosures(latestGLClosure, transactionDate);
+	
+	            /** Handle client payments **/
+	            if (clientTransactionDTO.isChargePayment()) {
+	                createJournalEntriesForChargePayments(clientTransactionDTO, office);
+	            }
+	        }
+    	} catch (final DataIntegrityViolationException dve) {
+		  final Throwable realCause = dve.getMostSpecificCause();
+		  logger.error(dve.getMessage(), dve);
+		  throw new PlatformDataIntegrityException("error.msg.glJournalEntry.unknown.data.integrity.issue",
+			  "Unknown data integrity issue with resource Journal Entry: " + realCause.getMessage());
+		}
     }
 
     /**
