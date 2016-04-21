@@ -191,7 +191,7 @@ public abstract class AbstractLoanScheduleGenerator implements LoanScheduleGener
 
             // Loan Schedule Exceptions that need to be applied for Loan Account
             LoanTermVariationParams termVariationParams = applyLoanTermVariations(loanApplicationTerms, scheduleParams,
-                    previousRepaymentDate, scheduledDueDate);
+                    previousRepaymentDate, scheduledDueDate, loanApplicationTerms.isChangeEmiIfRepaymentDateSameAsDisbursementDateEnabled());
 
             scheduledDueDate = termVariationParams.getScheduledDueDate();
             // Updates total days in term
@@ -925,17 +925,19 @@ public abstract class AbstractLoanScheduleGenerator implements LoanScheduleGener
      * @param priviousScheduledDueDate
      * @param previousRepaymentDate
      * @param scheduledDueDate
+     * @param boolean1 
      * @param scheduleDateForReversal
      * @return
      */
     private LoanTermVariationParams applyLoanTermVariations(final LoanApplicationTerms loanApplicationTerms,
-            final LoanScheduleParams scheduleParams, final LocalDate previousRepaymentDate, final LocalDate scheduledDueDate) {
+            final LoanScheduleParams scheduleParams, final LocalDate previousRepaymentDate, final LocalDate scheduledDueDate, 
+            final Boolean isChangeEmiIfRepaymentDateSameAsDisbursementDateEnabled) {
         boolean skipPeriod = false;
         boolean recalculateAmounts = false;
         LocalDate modifiedScheduledDueDate = scheduledDueDate;
 
         // due date changes should be applied only for that dueDate
-        if (loanApplicationTerms.getLoanTermVariations().hasDueDateVariation(scheduledDueDate)) {
+        if (loanApplicationTerms.getLoanTermVariations().hasDueDateVariation(scheduledDueDate, isChangeEmiIfRepaymentDateSameAsDisbursementDateEnabled)) {
             LoanTermVariationsData loanTermVariationsData = loanApplicationTerms.getLoanTermVariations().nextDueDateVariation();
             if (loanTermVariationsData.getTermApplicableFrom().isEqual(modifiedScheduledDueDate)) {
                 modifiedScheduledDueDate = loanTermVariationsData.getDateValue();
@@ -946,7 +948,7 @@ public abstract class AbstractLoanScheduleGenerator implements LoanScheduleGener
             }
         }
 
-        while (loanApplicationTerms.getLoanTermVariations().hasVariation(modifiedScheduledDueDate)) {
+        while (loanApplicationTerms.getLoanTermVariations().hasVariation(modifiedScheduledDueDate, isChangeEmiIfRepaymentDateSameAsDisbursementDateEnabled)) {
             LoanTermVariationsData loanTermVariationsData = loanApplicationTerms.getLoanTermVariations().nextVariation();
             if (loanTermVariationsData.isProcessed()) {
                 continue;
@@ -1007,7 +1009,7 @@ public abstract class AbstractLoanScheduleGenerator implements LoanScheduleGener
     private void applyLoanVariationsForPartialScheduleGenerate(final LoanApplicationTerms loanApplicationTerms,
             LoanScheduleParams scheduleParams, final Collection<LoanTermVariationsData> interestRates) {
         // Applies loan variations
-        while (loanApplicationTerms.getLoanTermVariations().hasVariation(scheduleParams.getPeriodStartDate())) {
+        while (loanApplicationTerms.getLoanTermVariations().hasVariation(scheduleParams.getPeriodStartDate(), loanApplicationTerms.isChangeEmiIfRepaymentDateSameAsDisbursementDateEnabled())) {
             LoanTermVariationsData variation = loanApplicationTerms.getLoanTermVariations().nextVariation();
             if (!variation.isSpecificToInstallment()) {
                 switch (variation.getTermVariationType()) {
@@ -1596,7 +1598,8 @@ public abstract class AbstractLoanScheduleGenerator implements LoanScheduleGener
     public LoanRescheduleModel reschedule(final MathContext mathContext, final LoanRescheduleRequest loanRescheduleRequest,
             final ApplicationCurrency applicationCurrency, final HolidayDetailDTO holidayDetailDTO,
             final CalendarInstance restCalendarInstance, final CalendarInstance compoundingCalendarInstance, final Calendar loanCalendar,
-            final FloatingRateDTO floatingRateDTO, final boolean isSkipRepaymentonmonthFirst, final Integer numberofdays) {
+            final FloatingRateDTO floatingRateDTO, final boolean isSkipRepaymentonmonthFirst, final Integer numberofdays, 
+            final Boolean isChangeEmiIfRepaymentDateSameAsDisbursementDateEnabled) {
 
         final Loan loan = loanRescheduleRequest.getLoan();
         final LoanSummary loanSummary = loan.getSummary();
@@ -1738,7 +1741,8 @@ public abstract class AbstractLoanScheduleGenerator implements LoanScheduleGener
 
             // get the loan application terms from the Loan object
             final LoanApplicationTerms loanApplicationTerms = loan.getLoanApplicationTerms(applicationCurrency, restCalendarInstance,
-                    compoundingCalendarInstance, loanCalendar, floatingRateDTO, isSkipRepaymentonmonthFirst, numberofdays);
+                    compoundingCalendarInstance, loanCalendar, floatingRateDTO, isSkipRepaymentonmonthFirst, numberofdays,
+                    isChangeEmiIfRepaymentDateSameAsDisbursementDateEnabled);
 
             // for applying variations
             Collection<LoanTermVariationsData> loanTermVariations = loanApplicationTerms.getLoanTermVariations().getInterestRateChanges();
@@ -2191,7 +2195,7 @@ public abstract class AbstractLoanScheduleGenerator implements LoanScheduleGener
                     }
                     periodNumber++;
                     // check for date changes
-                    while (loanApplicationTerms.getLoanTermVariations().hasDueDateVariation(lastInstallmentDate)) {
+                    while (loanApplicationTerms.getLoanTermVariations().hasDueDateVariation(lastInstallmentDate, loanApplicationTerms.isChangeEmiIfRepaymentDateSameAsDisbursementDateEnabled())) {
                         LoanTermVariationsData variation = loanApplicationTerms.getLoanTermVariations().nextDueDateVariation();
                         if (!variation.isSpecificToInstallment()) {
                             actualRepaymentDate = variation.getDateValue();

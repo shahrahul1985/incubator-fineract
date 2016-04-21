@@ -404,6 +404,25 @@ public class LoanScheduleAssembler {
                 loanTermVariations.add(loanTermVariation);
             }
         }
+        
+        /*
+         *  if their is a variations in EMI amount For Multi disbursal Loan
+         *  get the EMI amounts from LoanTermVariation table
+         */
+        final Long loanId = this.fromApiJsonHelper.extractLongNamed("id", element);
+        
+        if(loanId != null){
+            Loan loan = this.loanRepositoryWrapper.findOneWithNotFoundDetection(loanId);
+            List<LoanTermVariations> loanEmiTermVariations = loan.getLoanTermVariations();
+            for(LoanTermVariations loanEmiTermVariation : loanEmiTermVariations){
+                LoanTermVariationsData loanTermVariation = new LoanTermVariationsData(
+                        LoanEnumerations.loanvariationType(LoanTermVariationType.EMI_AMOUNT), new LocalDate(loanEmiTermVariation.getTermApplicableFrom()),
+                        loanEmiTermVariation.getTermValue(), null, false);
+                loanTermVariations.add(loanTermVariation);
+            }
+        }
+        
+        final Boolean isChangeEmiIfRepaymentDateSameAsDisbursementDateEnabled = this.configurationDomainService.isChangeEmiIfRepaymentDateSameAsDisbursementDateEnabled();
 
         return LoanApplicationTerms.assembleFrom(applicationCurrency, loanTermFrequency, loanTermPeriodFrequencyType, numberOfRepayments,
                 repaymentEvery, repaymentPeriodFrequencyType, nthDay, weekDayType, amortizationMethod, interestMethod,
@@ -414,7 +433,8 @@ public class LoanScheduleAssembler {
                 maxOutstandingBalance, graceOnArrearsAgeing, daysInMonthType, daysInYearType, isInterestRecalculationEnabled,
                 recalculationFrequencyType, restCalendarInstance, compoundingCalendarInstance, compoundingFrequencyType,
                 principalThresholdForLastInstalment, installmentAmountInMultiplesOf, loanProduct.preCloseInterestCalculationStrategy(),
-                calendar, BigDecimal.ZERO, loanTermVariations, isInterestChargedFromDateSameAsDisbursalDateEnabled,numberOfDays, isSkipMeetingOnFirstDay);
+                calendar, BigDecimal.ZERO, loanTermVariations, isInterestChargedFromDateSameAsDisbursalDateEnabled,numberOfDays, isSkipMeetingOnFirstDay,
+                isChangeEmiIfRepaymentDateSameAsDisbursementDateEnabled);
 }
 
     private CalendarInstance createCalendarForSameAsRepayment(final Integer repaymentEvery,
