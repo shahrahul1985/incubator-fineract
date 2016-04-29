@@ -2478,6 +2478,7 @@ public class Loan extends AbstractPersistable<Long> {
                         allNonContraTransactionsPostDisbursement, getCurrency(), this.repaymentScheduleInstallments, charges());
                 for (final Map.Entry<Long, LoanTransaction> mapEntry : changedTransactionDetail.getNewTransactionMappings().entrySet()) {
                     mapEntry.getValue().updateLoan(this);
+                    this.loanTransactions.add(mapEntry.getValue());
                 }
 
             }
