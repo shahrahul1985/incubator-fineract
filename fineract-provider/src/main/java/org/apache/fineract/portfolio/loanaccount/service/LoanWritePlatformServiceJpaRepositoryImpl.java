@@ -386,6 +386,7 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
                     this.loanTransactionRepository.save(mapEntry.getValue());
                     this.accountTransfersWritePlatformService.updateLoanTransaction(mapEntry.getKey(), mapEntry.getValue());
                 }
+                loan.getLoanTransactions().addAll(changedTransactionDetail.getNewTransactionMappings().values());
             }
 
             // auto create standing instruction
@@ -622,6 +623,7 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
                         this.loanTransactionRepository.save(mapEntry.getValue());
                         this.accountTransfersWritePlatformService.updateLoanTransaction(mapEntry.getKey(), mapEntry.getValue());
                     }
+                    loan.getLoanTransactions().addAll(changedTransactionDetail.getNewTransactionMappings().values());
                 }
                 postJournalEntries(loan, existingTransactionIds, existingReversedTransactionIds);
             }
@@ -1063,6 +1065,7 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
             this.loanTransactionRepository.save(mapEntry.getValue());
             this.accountTransfersWritePlatformService.updateLoanTransaction(mapEntry.getKey(), mapEntry.getValue());
         }
+        loan.getLoanTransactions().addAll(changedTransactionDetail.getNewTransactionMappings().values());
         saveLoanWithDataIntegrityViolationChecks(loan);
         final String noteText = command.stringValueOfParameterNamed("note");
         if (StringUtils.isNotBlank(noteText)) {
@@ -1125,6 +1128,7 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
             this.loanTransactionRepository.save(mapEntry.getValue());
             this.accountTransfersWritePlatformService.updateLoanTransaction(mapEntry.getKey(), mapEntry.getValue());
         }
+        loan.getLoanTransactions().addAll(changedTransactionDetail.getNewTransactionMappings().values());
         saveLoanWithDataIntegrityViolationChecks(loan);
 
         final String noteText = command.stringValueOfParameterNamed("note");

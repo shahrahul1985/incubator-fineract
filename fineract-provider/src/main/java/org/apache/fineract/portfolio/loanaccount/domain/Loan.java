@@ -2381,7 +2381,7 @@ public class Loan extends AbstractPersistable<Long> {
         }
 
         if (isRepaymentScheduleRegenerationRequiredForDisbursement(actualDisbursementDate) || recalculateSchedule || isEmiAmountChanged || rescheduledRepaymentDate != null) {
-            regenerateRepaymentSchedule(scheduleGeneratorDTO, currentUser);
+        	recalculateScheduleFromLastTransaction(scheduleGeneratorDTO, currentUser);
         }
     }
 
@@ -3492,18 +3492,7 @@ public class Loan extends AbstractPersistable<Long> {
         if (isDisbursementAllowed() && atleastOnceDisbursed()) {
             this.loanRepaymentScheduleDetail.setPrincipal(getDisbursedAmount());
             removeDisbursementDetail();
-            regenerateRepaymentSchedule(scheduleGeneratorDTO, currentUser);
-            if (this.repaymentScheduleDetail().isInterestRecalculationEnabled()) {
-                regenerateRepaymentScheduleWithInterestRecalculation(scheduleGeneratorDTO, currentUser);
-            }
-            final List<LoanTransaction> allNonContraTransactionsPostDisbursement = retreiveListOfTransactionsPostDisbursement();
-            changedTransactionDetail = loanRepaymentScheduleTransactionProcessor.handleTransaction(getDisbursementDate(),
-                    allNonContraTransactionsPostDisbursement, getCurrency(), this.repaymentScheduleInstallments, charges());
-            for (final Map.Entry<Long, LoanTransaction> mapEntry : changedTransactionDetail.getNewTransactionMappings().entrySet()) {
-                mapEntry.getValue().updateLoan(this);
-                this.loanTransactions.add(mapEntry.getValue());
-            }
-            updateLoanSummaryDerivedFields();
+            changedTransactionDetail =recalculateScheduleFromLastTransaction(scheduleGeneratorDTO, currentUser);
             LoanTransaction loanTransaction = findlatestTransaction();
             doPostLoanTransactionChecks(loanTransaction.getTransactionDate(), loanLifecycleStateMachine);
         }
@@ -4822,18 +4811,8 @@ public class Loan extends AbstractPersistable<Long> {
         }
 
         this.loanRepaymentScheduleDetail.setPrincipal(setPrincipalAmount);
-        if (this.repaymentScheduleDetail().isInterestRecalculationEnabled()) {
-            regenerateRepaymentScheduleWithInterestRecalculation(scheduleGeneratorDTO, currentUser);
-        } else {
-            regenerateRepaymentSchedule(scheduleGeneratorDTO, currentUser);
-        }
-
-        final LoanRepaymentScheduleTransactionProcessor loanRepaymentScheduleTransactionProcessor = this.transactionProcessorFactory
-                .determineProcessor(this.transactionProcessingStrategy);
-        final List<LoanTransaction> allNonContraTransactionsPostDisbursement = retreiveListOfTransactionsPostDisbursement();
-        ChangedTransactionDetail changedTransactionDetail = loanRepaymentScheduleTransactionProcessor.handleTransaction(
-                getDisbursementDate(), allNonContraTransactionsPostDisbursement, getCurrency(), this.repaymentScheduleInstallments,
-                charges());
+        ChangedTransactionDetail changedTransactionDetail =  recalculateScheduleFromLastTransaction(scheduleGeneratorDTO, currentUser);
+     
         for (final Map.Entry<Long, LoanTransaction> mapEntry : changedTransactionDetail.getNewTransactionMappings().entrySet()) {
             mapEntry.getValue().updateLoan(this);
             this.loanTransactions.add(mapEntry.getValue());
