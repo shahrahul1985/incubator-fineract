@@ -2743,7 +2743,8 @@ public class Loan extends AbstractPersistable<Long> {
             final List<Long> existingReversedTransactionIds, AppUser currentUser) {
 
         validateAccountStatus(LoanEvent.LOAN_DISBURSAL_UNDO);
-
+        existingTransactionIds.addAll(findExistingTransactionIds());
+        existingReversedTransactionIds.addAll(findExistingReversedTransactionIds());
         final Map<String, Object> actualChanges = new LinkedHashMap<>();
         final LoanStatus currentStatus = LoanStatus.fromInt(this.loanStatus);
         final LoanStatus statusEnum = this.loanLifecycleStateMachine.transition(LoanEvent.LOAN_DISBURSAL_UNDO, currentStatus);
@@ -2778,8 +2779,7 @@ public class Loan extends AbstractPersistable<Long> {
 
             actualChanges.put("actualDisbursementDate", "");
 
-            existingTransactionIds.addAll(findExistingTransactionIds());
-            existingReversedTransactionIds.addAll(findExistingReversedTransactionIds());
+            
             this.accruedTill = null;
             reverseExistingTransactions();
             updateLoanSummaryDerivedFields();
