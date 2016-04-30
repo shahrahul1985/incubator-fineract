@@ -2322,10 +2322,10 @@ public class Loan extends AbstractPersistable<Long> {
         validateDisbursementDateIsOnNonWorkingDay(holidayDetailDTO.getWorkingDays(), holidayDetailDTO.isAllowTransactionsOnNonWorkingDay());
         validateDisbursementDateIsOnHoliday(holidayDetailDTO.isAllowTransactionsOnHoliday(), holidayDetailDTO.getHolidays());
 
-        if (this.repaymentScheduleDetail().isInterestRecalculationEnabled()
+       /* if (this.repaymentScheduleDetail().isInterestRecalculationEnabled()
                 && (fetchRepaymentScheduleInstallment(1).getDueDate().isBefore(LocalDate.now()) || isDisbursementMissed())) {
             regenerateRepaymentScheduleWithInterestRecalculation(scheduleGeneratorDTO, currentUser);
-        }
+        }*/
 
         updateSummaryWithTotalFeeChargesDueAtDisbursement(deriveSumTotalOfChargesDueAtDisbursement());
         updateLoanRepaymentPeriodsDerivedFields(actualDisbursementDate);
@@ -2380,8 +2380,9 @@ public class Loan extends AbstractPersistable<Long> {
             this.loanTermVariations.add(loanVariationTerms);
         }
 
-        if (isRepaymentScheduleRegenerationRequiredForDisbursement(actualDisbursementDate) || recalculateSchedule || isEmiAmountChanged || rescheduledRepaymentDate != null) {
-        	recalculateScheduleFromLastTransaction(scheduleGeneratorDTO, currentUser);
+        if (isRepaymentScheduleRegenerationRequiredForDisbursement(actualDisbursementDate) || recalculateSchedule || isEmiAmountChanged
+                || rescheduledRepaymentDate != null) {
+            recalculateSchedule(scheduleGeneratorDTO, currentUser);
         }
     }
 
@@ -4900,14 +4901,18 @@ public class Loan extends AbstractPersistable<Long> {
         return recalculateScheduleFromLastTransaction(generatorDTO, currentUser);
 
     }
-
-    private ChangedTransactionDetail recalculateScheduleFromLastTransaction(final ScheduleGeneratorDTO generatorDTO,
-            final AppUser currentUser) {
+    
+    private void recalculateSchedule(final ScheduleGeneratorDTO generatorDTO, final AppUser currentUser) {
         if (this.repaymentScheduleDetail().isInterestRecalculationEnabled()) {
             regenerateRepaymentScheduleWithInterestRecalculation(generatorDTO, currentUser);
         } else {
             regenerateRepaymentSchedule(generatorDTO, currentUser);
         }
+    }
+
+    private ChangedTransactionDetail recalculateScheduleFromLastTransaction(final ScheduleGeneratorDTO generatorDTO,
+            final AppUser currentUser) {
+        recalculateSchedule(generatorDTO, currentUser);
         return processTransactions();
     }
 

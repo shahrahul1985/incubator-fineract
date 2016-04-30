@@ -373,6 +373,13 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
             }
         }
         if (!changes.isEmpty()) {
+            if (changedTransactionDetail != null) {
+                for (final Map.Entry<Long, LoanTransaction> mapEntry : changedTransactionDetail.getNewTransactionMappings().entrySet()) {
+                    this.loanTransactionRepository.save(mapEntry.getValue());
+                    this.accountTransfersWritePlatformService.updateLoanTransaction(mapEntry.getKey(), mapEntry.getValue());
+                }
+            }
+            
             saveAndFlushLoanWithDataIntegrityViolationChecks(loan);
 
             final String noteText = command.stringValueOfParameterNamed("note");
@@ -381,13 +388,7 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
                 this.noteRepository.save(note);
             }
 
-            if (changedTransactionDetail != null) {
-                for (final Map.Entry<Long, LoanTransaction> mapEntry : changedTransactionDetail.getNewTransactionMappings().entrySet()) {
-                    this.loanTransactionRepository.save(mapEntry.getValue());
-                    this.accountTransfersWritePlatformService.updateLoanTransaction(mapEntry.getKey(), mapEntry.getValue());
-                }
-                loan.getLoanTransactions().addAll(changedTransactionDetail.getNewTransactionMappings().values());
-            }
+           
 
             // auto create standing instruction
             createStandingInstruction(loan);
@@ -610,7 +611,13 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
                 }
             }
             if (!changes.isEmpty()) {
-
+                if (changedTransactionDetail != null) {
+                    for (final Map.Entry<Long, LoanTransaction> mapEntry : changedTransactionDetail.getNewTransactionMappings().entrySet()) {
+                        this.loanTransactionRepository.save(mapEntry.getValue());
+                        this.accountTransfersWritePlatformService.updateLoanTransaction(mapEntry.getKey(), mapEntry.getValue());
+                    }
+                }
+                
                 saveAndFlushLoanWithDataIntegrityViolationChecks(loan);
 
                 final String noteText = command.stringValueOfParameterNamed("note");
@@ -618,13 +625,7 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
                     final Note note = Note.loanNote(loan, noteText);
                     this.noteRepository.save(note);
                 }
-                if (changedTransactionDetail != null) {
-                    for (final Map.Entry<Long, LoanTransaction> mapEntry : changedTransactionDetail.getNewTransactionMappings().entrySet()) {
-                        this.loanTransactionRepository.save(mapEntry.getValue());
-                        this.accountTransfersWritePlatformService.updateLoanTransaction(mapEntry.getKey(), mapEntry.getValue());
-                    }
-                    loan.getLoanTransactions().addAll(changedTransactionDetail.getNewTransactionMappings().values());
-                }
+               
                 postJournalEntries(loan, existingTransactionIds, existingReversedTransactionIds);
             }
             final Set<LoanCharge> loanCharges = loan.charges();
