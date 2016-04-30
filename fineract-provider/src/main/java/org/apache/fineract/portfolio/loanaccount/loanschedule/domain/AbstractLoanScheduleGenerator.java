@@ -1928,7 +1928,7 @@ public abstract class AbstractLoanScheduleGenerator implements LoanScheduleGener
         BigDecimal principal = BigDecimal.ZERO;
         MonetaryCurrency currency = loanApplicationTerms.getPrincipal().getCurrency();
         for (DisbursementData disbursementData : loanApplicationTerms.getDisbursementDatas()) {
-            if (disbursementData.disbursementDate().equals(disbursementDate)) {
+            if (disbursementData.disbursementDate().equals(disbursementDate) && (!excludePastUndisbursed || disbursementData.isDisbursed())) {
                 final LoanScheduleModelDisbursementPeriod disbursementPeriod = LoanScheduleModelDisbursementPeriod.disbursement(
                         disbursementData.disbursementDate(), Money.of(currency, disbursementData.amount()), chargesDueAtTimeOfDisbursement);
                 periods.add(disbursementPeriod);

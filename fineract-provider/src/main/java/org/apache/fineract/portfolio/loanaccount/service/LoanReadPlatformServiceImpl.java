@@ -1043,7 +1043,8 @@ public class LoanReadPlatformServiceImpl implements LoanReadPlatformService {
                 if (disbursementData != null) {
                     BigDecimal principal = BigDecimal.ZERO;
                     for (DisbursementData data : disbursementData) {
-                        if (fromDate.equals(this.disbursement.disbursementDate()) && data.disbursementDate().equals(fromDate)) {
+                        if (fromDate.equals(this.disbursement.disbursementDate()) && data.disbursementDate().equals(fromDate)
+                                && (!excludePastUndisbursed || data.isDisbursed())) {
                             principal = principal.add(data.amount());
                             if (data.getChargeAmount() == null) {
                                 final LoanSchedulePeriodData periodData = LoanSchedulePeriodData.disbursementOnlyPeriod(
