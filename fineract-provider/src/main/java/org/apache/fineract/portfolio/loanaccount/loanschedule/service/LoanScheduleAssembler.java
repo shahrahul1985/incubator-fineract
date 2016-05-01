@@ -84,6 +84,8 @@ import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanCharge;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanDisbursementDetails;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanRepaymentScheduleInstallment;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanRepository;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanRepositoryWrapper;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTermVariationType;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTermVariations;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTermVariationsComparator;
@@ -142,6 +144,7 @@ public class LoanScheduleAssembler {
     private final CalendarInstanceRepository calendarInstanceRepository;
     private final PlatformSecurityContext context;
     private final LoanUtilService loanUtilService;
+    private final LoanRepositoryWrapper loanRepositoryWrapper;
 
     @Autowired
     public LoanScheduleAssembler(final FromJsonHelper fromApiJsonHelper, final LoanProductRepository loanProductRepository,
@@ -154,7 +157,7 @@ public class LoanScheduleAssembler {
             final FloatingRatesReadPlatformService floatingRatesReadPlatformService,
             final VariableLoanScheduleFromApiJsonValidator variableLoanScheduleFromApiJsonValidator,
             final CalendarInstanceRepository calendarInstanceRepository, final PlatformSecurityContext context,
-            final LoanUtilService loanUtilService) {
+            final LoanUtilService loanUtilService, final LoanRepositoryWrapper loanRepositoryWrapper) {
         this.fromApiJsonHelper = fromApiJsonHelper;
         this.loanProductRepository = loanProductRepository;
         this.applicationCurrencyRepository = applicationCurrencyRepository;
@@ -172,6 +175,7 @@ public class LoanScheduleAssembler {
         this.calendarInstanceRepository = calendarInstanceRepository;
         this.context = context;
         this.loanUtilService = loanUtilService;
+        this.loanRepositoryWrapper = loanRepositoryWrapper;
     }
 
     public LoanApplicationTerms assembleLoanTerms(final JsonElement element) {
@@ -425,7 +429,7 @@ public class LoanScheduleAssembler {
                 repaymentEvery, repaymentPeriodFrequencyType, nthDay, weekDayType, amortizationMethod, interestMethod,
                 interestRatePerPeriod, interestRatePeriodFrequencyType, annualNominalInterestRate, interestCalculationPeriodMethod,
                 allowPartialPeriodInterestCalcualtion, principalMoney, expectedDisbursementDate, repaymentsStartingFromDate,
-                calculatedRepaymentsStartingFromDate, graceOnPrincipalPayment, recurringMoratoriumOnPrincipalPeriods, graceOnInterestPayment, graceOnInterestCharged,
+                calculatedRepaymentsStartingFromDate, graceOnPrincipalPayment, graceOnInterestPayment, graceOnInterestCharged,
                 interestChargedFromDate, inArrearsToleranceMoney, loanProduct.isMultiDisburseLoan(), emiAmount, disbursementDatas,
                 maxOutstandingBalance, graceOnArrearsAgeing, daysInMonthType, daysInYearType, isInterestRecalculationEnabled,
                 recalculationFrequencyType, restCalendarInstance, compoundingCalendarInstance, compoundingFrequencyType,
