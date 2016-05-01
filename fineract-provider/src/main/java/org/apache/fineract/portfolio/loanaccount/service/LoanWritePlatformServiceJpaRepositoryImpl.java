@@ -307,6 +307,7 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
         
         final LocalDate nextPossibleRepaymentDate = loan.getNextPossibleRepaymentDateForRescheduling();
         final Date rescheduledRepaymentDate = command.DateValueOfParameterNamed("adjustRepaymentDate");
+        final LocalDate actualDisbursementDate = command.localDateValueOfParameterNamed("actualDisbursementDate");//this.fromApiJsonHelper.extractLocalDateNamed("actualDisbursementDate", element);
 
         // check for product mix validations
         checkForProductMixRestrictions(loan);
